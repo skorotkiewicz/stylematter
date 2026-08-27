@@ -25,6 +25,7 @@ const chromium = spawn(process.env.CHROMIUM_BIN || "chromium", [
   "--headless",
   "--no-sandbox",
   "--disable-gpu",
+  "--window-size=1280,950",
   "--remote-debugging-port=0",
   "--remote-allow-origins=*",
   `--user-data-dir=${profile}`,
@@ -117,6 +118,8 @@ try {
   }
 
   const card = await center("document.querySelector('[data-sm-id=\"gardens\"]')");
+  const viewport = await cdp.evaluate("({width:innerWidth,height:innerHeight})");
+  assert.ok(card.x > 0 && card.x < viewport.width && card.y > 0 && card.y < viewport.height, { card, viewport });
   await cdp.call("Input.dispatchMouseEvent", { type: "mousePressed", x: card.x, y: card.y, button: "left", buttons: 1, clickCount: 1 });
   await cdp.call("Input.dispatchMouseEvent", { type: "mouseReleased", x: card.x, y: card.y, button: "left", buttons: 0, clickCount: 1 });
   assert.equal(await cdp.evaluate("document.querySelector('[data-stylematter-editor]').shadowRoot.querySelector('.status').textContent"), "editing gardens");
