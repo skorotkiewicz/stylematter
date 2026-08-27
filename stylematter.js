@@ -123,6 +123,7 @@ function overlayMarkup() {
       .link { fill: none; stroke: var(--link-color, #c97856); stroke-width: 2.5; stroke-linecap: round; opacity: .72; }
       .spring { fill: none; stroke: #bd7b10; stroke-width: 3; stroke-linejoin: round; }
       .control { position: fixed; pointer-events: auto; touch-action: none; box-shadow: 0 4px 13px rgb(45 39 31 / .25); }
+      .control:disabled { opacity: .45; cursor: wait; }
       button, input { font: inherit; }
       button { display: grid; place-items: center; padding: 0; border: 2px solid #176b63; color: #fffdf7; background: #176b63; cursor: pointer; }
       button:focus-visible, input:focus-visible { outline: 4px solid #bd7b10; outline-offset: 3px; }
@@ -165,6 +166,7 @@ export function attachStyleMatter(root, options = {}) {
   if (!(root instanceof Element)) throw new TypeError("StyleMatter requires a root Element");
   if (ACTIVE_ROOTS.has(root)) throw new Error("StyleMatter is already attached to this root");
 
+  // ponytail: targets are fixed at attach time; observe DOM mutations when hosts need live node insertion.
   const targets = [...root.querySelectorAll("[data-sm-id]")];
   if (!targets.length) throw new Error("StyleMatter found no [data-sm-id] elements");
   const ids = targets.map(target => target.dataset.smId);
@@ -182,6 +184,7 @@ export function attachStyleMatter(root, options = {}) {
   let destroyed = false;
   let drag;
   let saveTimer;
+  let storageAvailable = persistence;
   const past = [];
   const future = [];
   const originalRoot = captureProperties(root, ["--sm-gap"]);
@@ -204,6 +207,8 @@ export function attachStyleMatter(root, options = {}) {
   const redoButton = shadow.querySelector(".redo");
   const detachButton = shadow.querySelector(".detach");
   const status = shadow.querySelector(".status");
+  const editingControls = [material, corner, padding, gap];
+  editingControls.forEach(control => { control.disabled = true; });
 
   function selectedNode() {
     return graph.nodes[selectedId];
@@ -221,7 +226,7 @@ export function attachStyleMatter(root, options = {}) {
   }
 
   function scheduleSave() {
-    if (!persistence || destroyed) return;
+    if (!storageAvailable || destroyed) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveGraph(storageKey, graph).catch(error => {
       status.textContent = "save failed";
@@ -286,7 +291,7 @@ export function attachStyleMatter(root, options = {}) {
 
     undoButton.disabled = !past.length;
     redoButton.disabled = !future.length;
-    status.textContent = `editing ${selectedId}`;
+    status.textContent = `editing ${selectedId}${storageAvailable ? "" : " · memory only"}`;
   }
 
   let drawFrame;
@@ -402,7 +407,8 @@ export function attachStyleMatter(root, options = {}) {
     if (destroyed) return;
     destroyed = true;
     clearTimeout(saveTimer);
-    if (persistence) await saveGraph(storageKey, graph).catch(error => console.warn("StyleMatter could not save before detach", error));
+    await ready;
+    if (storageAvailable) await saveGraph(storageKey, graph).catch(error => console.warn("StyleMatter could not save before detach", error));
     cancelAnimationFrame(drawFrame);
     resizeObserver.disconnect();
     root.removeEventListener("pointerdown", selectFromRoot);
@@ -423,18 +429,21 @@ export function attachStyleMatter(root, options = {}) {
       try {
         graph = normalizeGraph(await loadGraph(storageKey), fallback);
       } catch (error) {
-        status.textContent = "memory only";
+        storageAvailable = false;
         console.warn("StyleMatter could not load saved state", error);
       }
     }
-    if (!destroyed) changed();
+    if (!destroyed) {
+      editingControls.forEach(control => { control.disabled = false; });
+      changed();
+    }
   })();
 
   api = {
     ready,
     undo,
     redo,
-    save: () => saveGraph(storageKey, graph),
+    save: () => storageAvailable ? saveGraph(storageKey, graph) : Promise.resolve(false),
     destroy,
     get graph() { return structuredClone(graph); }
   };
