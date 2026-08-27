@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Common Ground, edited with StyleMatter</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      color: #292720;
+      background: #eee9de;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background:
+        linear-gradient(rgba(47, 44, 36, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47, 44, 36, .04) 1px, transparent 1px),
+        #eee9de;
+      background-size: 24px 24px;
+    }
+
+    a { color: inherit; }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 22px 0;
+      border-bottom: 1px solid #c8beae;
+    }
+
+    .brand {
+      color: #176b63;
+      font: 700 1.15rem/1 Georgia, serif;
+      text-decoration: none;
+    }
+
+    .site-nav {
+      display: flex;
+      gap: 24px;
+      color: #665f55;
+      font-size: .78rem;
+      font-weight: 750;
+    }
+
+    .site-nav a { text-decoration: none; }
+    .site-nav a:hover { text-decoration: underline; }
+
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 62px 0 78px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      align-items: end;
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+
+    h1 {
+      max-width: 10em;
+      margin: 0;
+      font: 500 clamp(3.2rem, 8vw, 6.8rem)/.84 Georgia, serif;
+      letter-spacing: -.06em;
+    }
+
+    .hero-copy {
+      margin: 0;
+      color: #625d53;
+      line-height: 1.6;
+    }
+
+    .editor-note {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 18px;
+      color: #176b63;
+      font-size: .75rem;
+      font-weight: 800;
+    }
+
+    .editor-note::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #176b63;
+      box-shadow: 0 0 0 5px rgba(23, 107, 99, .12);
+    }
+
+    .card-scroll {
+      margin: 0 -8px;
+      padding: 8px 8px 28px;
+      overflow-x: auto;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sm-gap, 44px);
+      min-width: 760px;
+    }
+
+    .story-card {
+      min-height: 360px;
+      padding: var(--sm-padding, 32px);
+      overflow: hidden;
+      border: 2px solid #176b63;
+      border-radius: var(--sm-radius, 26px);
+      color: #264f4b;
+      background: var(--sm-material, #dfa17b);
+      box-shadow: 0 15px 32px rgba(47, 41, 32, .13);
+    }
+
+    .story-card::before {
+      content: "";
+      display: block;
+      width: 42px;
+      height: 7px;
+      margin-bottom: 58px;
+      border-radius: 99px;
+      background: #176b63;
+    }
+
+    .story-card small {
+      display: block;
+      margin-bottom: 10px;
+      color: #525047;
+      font-size: .7rem;
+      font-weight: 850;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .story-card h2 {
+      max-width: 12em;
+      margin: 0 0 14px;
+      font: 500 2.35rem/1 Georgia, serif;
+      letter-spacing: -.025em;
+    }
+
+    .story-card p {
+      max-width: 31rem;
+      margin: 0 0 28px;
+      color: #4f4a42;
+      line-height: 1.55;
+    }
+
+    .story-card span {
+      display: inline-block;
+      padding: 10px 15px;
+      border-radius: 999px;
+      color: #fffdf7;
+      background: #176b63;
+      font-size: .78rem;
+      font-weight: 800;
+    }
+
+    .instructions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid #c8beae;
+      border-radius: 17px;
+      background: #c8beae;
+    }
+
+    .instructions div {
+      min-height: 96px;
+      padding: 17px;
+      background: #faf7ef;
+    }
+
+    .instructions strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: .78rem;
+    }
+
+    .instructions span {
+      color: #6d665c;
+      font-size: .74rem;
+      line-height: 1.4;
+    }
+
+    .lab-link {
+      display: inline-block;
+      margin-top: 22px;
+      color: #176b63;
+      font-size: .76rem;
+      font-weight: 800;
+    }
+
+    @media (max-width: 720px) {
+      .site-nav { gap: 12px; }
+      main { padding-top: 38px; }
+      .hero { grid-template-columns: 1fr; gap: 22px; }
+      .instructions { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#">Common Ground</a>
+    <nav class="site-nav" aria-label="Site navigation">
+      <a href="#stories">Stories</a>
+      <a href="#about">About</a>
+      <a href="docs/index.html">Lab</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="about">
+      <h1>A real page, still itself</h1>
+      <div>
+        <p class="hero-copy">StyleMatter is attached as a library. The page owns its markup and styles. The editor only supplies graph values and a removable interaction layer.</p>
+        <p class="editor-note" id="editorStatus">Attaching editor</p>
+      </div>
+    </section>
+
+    <div class="card-scroll" id="stories">
+      <section class="card-grid" id="editableStories" data-stylematter-root>
+        <article class="story-card" data-sm-id="coast" data-sm-material="story-surface">
+          <small>Field report 01</small>
+          <h2>Where the salt line moved</h2>
+          <p>Residents mark each winter tide on the old ferry wall. This year the chalk sits three steps higher.</p>
+          <span>Read field notes</span>
+        </article>
+
+        <article class="story-card" data-sm-id="gardens" data-sm-material="story-surface">
+          <small>Field report 02</small>
+          <h2>Gardens built to travel</h2>
+          <p>Raised beds now move between three plots as the shoreline changes. Nothing permanent is treated as fixed.</p>
+          <span>Open photo essay</span>
+        </article>
+      </section>
+    </div>
+
+    <section class="instructions" aria-label="Editor instructions">
+      <div><strong>Select</strong><span>Touch either story card.</span></div>
+      <div><strong>Material</strong><span>Change the orb linked to both cards.</span></div>
+      <div><strong>Geometry</strong><span>Pull the corner, inner edge, or spring.</span></div>
+      <div><strong>History</strong><span>Use the floating undo and redo controls.</span></div>
+    </section>
+
+    <a class="lab-link" href="docs/index.html">Open the archived experiments</a>
+  </main>
+
+  <script type="module">
+    import { attachStyleMatter } from "./stylematter.js";
+
+    const root = document.querySelector("#editableStories");
+    const status = document.querySelector("#editorStatus");
+    const editor = attachStyleMatter(root, { storageKey: "common-ground-stories" });
+    window.styleMatter = editor;
+
+    await editor.ready;
+    status.textContent = "Editor attached, state restored";
+    document.documentElement.dataset.stylematterReady = "true";
+  </script>
+</body>
+</html>
