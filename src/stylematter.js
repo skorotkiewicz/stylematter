@@ -197,6 +197,8 @@ export function attachStyleMatter(root, options = {}) {
   const hasLoadAdapter = typeof options.loadGraph === "function";
   const hasSaveAdapter = typeof options.saveGraph === "function";
   if (typeof storageKey !== "string" || !storageKey) throw new TypeError("StyleMatter storageKey must be a non-empty string");
+  if (options.loadGraph !== undefined && !hasLoadAdapter) throw new TypeError("StyleMatter loadGraph must be a function");
+  if (options.saveGraph !== undefined && !hasSaveAdapter) throw new TypeError("StyleMatter saveGraph must be a function");
   if (hasLoadAdapter !== hasSaveAdapter) throw new TypeError("StyleMatter requires loadGraph and saveGraph together");
 
   const storage = hasLoadAdapter ? {

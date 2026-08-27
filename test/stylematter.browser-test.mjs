@@ -200,6 +200,14 @@ try {
     }
   })`, true);
   assert.equal(partialAdapterError, "StyleMatter requires loadGraph and saveGraph together");
+  const invalidAdapterError = await cdp.evaluate(`import('./src/stylematter.js').then(({attachStyleMatter}) => {
+    try {
+      attachStyleMatter(document.querySelector('#editableStories'), {loadGraph:'invalid',saveGraph:'invalid'});
+    } catch (error) {
+      return error.message;
+    }
+  })`, true);
+  assert.equal(invalidAdapterError, "StyleMatter loadGraph must be a function");
   assert.deepEqual(cdp.exceptions, []);
 
   console.log("Chromium lifecycle: pass");
