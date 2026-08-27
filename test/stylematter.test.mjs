@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clamp, colorToHex, normalizeGraph } from "./stylematter.js";
+import { clamp, colorToHex, isStyleMatterGraph, normalizeGraph } from "../src/stylematter.js";
 
 const fallback = {
   version: 1,
@@ -55,4 +55,14 @@ test("normalizeGraph does not mutate its fallback", () => {
   const before = structuredClone(fallback);
   normalizeGraph({ version: 1, materials: { shared: "#000000" } }, fallback);
   assert.deepEqual(fallback, before);
+});
+
+test("isStyleMatterGraph accepts a complete graph", () => {
+  assert.equal(isStyleMatterGraph(fallback), true);
+});
+
+test("isStyleMatterGraph rejects invalid server input", () => {
+  assert.equal(isStyleMatterGraph({ ...fallback, gap: 201 }), false);
+  assert.equal(isStyleMatterGraph({ ...fallback, materials: { shared: "red" } }), false);
+  assert.equal(isStyleMatterGraph({ ...fallback, nodes: { first: { material: "missing", radius: 1, padding: 1 } } }), false);
 });

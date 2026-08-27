@@ -169,13 +169,37 @@ try {
     nodeMaterial: document.querySelector('[data-sm-id="coast"]').style.getPropertyValue('--sm-material')
   }))()`), { host: false, rootGap: "", nodeMaterial: "" });
 
-  await cdp.evaluate(`import('./stylematter.js').then(async ({attachStyleMatter}) => {
-    window.reattachedStyleMatter=attachStyleMatter(document.querySelector('#editableStories'), {persistence:false});
+  await cdp.evaluate(`import('./src/stylematter.js').then(async ({attachStyleMatter}) => {
+    window.adapterEvents={loads:[],saves:[]};
+    window.adapterStored=${JSON.stringify(restored)};
+    window.reattachedStyleMatter=attachStyleMatter(document.querySelector('#editableStories'), {
+      storageKey:'server-stories',
+      loadGraph:async key => { window.adapterEvents.loads.push(key); return structuredClone(window.adapterStored); },
+      saveGraph:async (key, graph) => { window.adapterEvents.saves.push({key,graph}); window.adapterStored=structuredClone(graph); }
+    });
     await window.reattachedStyleMatter.ready;
   })`, true);
-  assert.equal(await cdp.evaluate("document.querySelectorAll('[data-stylematter-editor]').length"), 1);
+  assert.deepEqual(await cdp.evaluate("window.reattachedStyleMatter.graph"), restored);
+  assert.deepEqual(await cdp.evaluate("window.adapterEvents.loads"), ["server-stories"]);
+  await cdp.evaluate(`(() => {
+    const gap=document.querySelector('[data-stylematter-editor]').shadowRoot.querySelector('.gap');
+    gap.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight',bubbles:true}));
+  })()`);
+  assert.equal(await cdp.evaluate("window.reattachedStyleMatter.save()", true), true);
+  const adapterSave = await cdp.evaluate("window.adapterEvents.saves.at(-1)");
+  assert.equal(adapterSave.key, "server-stories");
+  assert.equal(adapterSave.graph.gap, 68);
   await cdp.evaluate("window.reattachedStyleMatter.destroy()", true);
   assert.equal(await cdp.evaluate("document.querySelectorAll('[data-stylematter-editor]').length"), 0);
+
+  const partialAdapterError = await cdp.evaluate(`import('./src/stylematter.js').then(({attachStyleMatter}) => {
+    try {
+      attachStyleMatter(document.querySelector('#editableStories'), {loadGraph:async () => null});
+    } catch (error) {
+      return error.message;
+    }
+  })`, true);
+  assert.equal(partialAdapterError, "StyleMatter requires loadGraph and saveGraph together");
   assert.deepEqual(cdp.exceptions, []);
 
   console.log("Chromium lifecycle: pass");

@@ -1,0 +1,44 @@
+{
+  "name": "stylematter",
+  "version": "0.1.0",
+  "description": "Embedded spatial style editor for DOM elements",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/stylematter.d.ts",
+      "import": "./src/stylematter.js",
+      "default": "./src/stylematter.js"
+    },
+    "./bun-server": {
+      "types": "./src/stylematter-server.d.ts",
+      "import": "./src/stylematter-server.js",
+      "default": "./src/stylematter-server.js"
+    }
+  },
+  "types": "./src/stylematter.d.ts",
+  "files": [
+    "src/stylematter.js",
+    "src/stylematter.d.ts",
+    "src/stylematter-server.js",
+    "src/stylematter-server.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "npm run test:unit && npm run test:browser && npm run test:server",
+    "test:unit": "node --test test/stylematter.test.mjs",
+    "test:browser": "node test/stylematter.browser-test.mjs",
+    "test:server": "bun test test/stylematter-server.test.js",
+    "start:server": "bun src/stylematter-server.js",
+    "prepack": "npm test"
+  },
+  "keywords": [
+    "css",
+    "dom",
+    "editor",
+    "spatial",
+    "visual"
+  ],
+  "license": "MIT"
+}

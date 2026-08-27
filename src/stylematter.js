@@ -13,6 +13,26 @@ export function colorToHex(color) {
   return `#${values.map(value => clamp(value, 0, 255).toString(16).padStart(2, "0")).join("")}`;
 }
 
+export function isStyleMatterGraph(value) {
+  if (!value || typeof value !== "object" || value.version !== 1) return false;
+  if (!value.materials || typeof value.materials !== "object" || Array.isArray(value.materials)) return false;
+  if (!value.nodes || typeof value.nodes !== "object" || Array.isArray(value.nodes)) return false;
+  if (!Number.isFinite(value.gap) || value.gap < 0 || value.gap > 200) return false;
+
+  const materials = Object.entries(value.materials);
+  const nodes = Object.entries(value.nodes);
+  if (!materials.length || materials.length > 1000 || !nodes.length || nodes.length > 10000) return false;
+  if (materials.some(([id, color]) => !id || !/^#[\da-f]{6}$/i.test(color))) return false;
+  return nodes.every(([id, node]) =>
+    id &&
+    node &&
+    typeof node === "object" &&
+    Object.hasOwn(value.materials, node.material) &&
+    Number.isFinite(node.radius) && node.radius >= 0 && node.radius <= 120 &&
+    Number.isFinite(node.padding) && node.padding >= 0 && node.padding <= 120
+  );
+}
+
 export function normalizeGraph(saved, fallback) {
   const graph = structuredClone(fallback);
   if (!saved || saved.version !== 1 || typeof saved !== "object") return graph;
@@ -46,7 +66,7 @@ function openDatabase() {
   return databasePromise;
 }
 
-async function loadGraph(key) {
+async function loadIndexedDbGraph(key) {
   const database = await openDatabase();
   if (!database) return null;
   return new Promise((resolve, reject) => {
@@ -56,7 +76,7 @@ async function loadGraph(key) {
   });
 }
 
-async function saveGraph(key, graph) {
+async function saveIndexedDbGraph(key, graph) {
   const database = await openDatabase();
   if (!database) return false;
   return new Promise((resolve, reject) => {
@@ -174,7 +194,18 @@ export function attachStyleMatter(root, options = {}) {
 
   const storageKey = options.storageKey || root.id || "default";
   const persistence = options.persistence !== false;
+  const hasLoadAdapter = typeof options.loadGraph === "function";
+  const hasSaveAdapter = typeof options.saveGraph === "function";
   if (typeof storageKey !== "string" || !storageKey) throw new TypeError("StyleMatter storageKey must be a non-empty string");
+  if (hasLoadAdapter !== hasSaveAdapter) throw new TypeError("StyleMatter requires loadGraph and saveGraph together");
+
+  const storage = hasLoadAdapter ? {
+    load: key => options.loadGraph(key),
+    save: async (key, value) => (await options.saveGraph(key, structuredClone(value))) !== false
+  } : persistence ? {
+    load: loadIndexedDbGraph,
+    save: saveIndexedDbGraph
+  } : null;
 
   ACTIVE_ROOTS.add(root);
   const byId = new Map(targets.map(target => [target.dataset.smId, target]));
@@ -184,7 +215,7 @@ export function attachStyleMatter(root, options = {}) {
   let destroyed = false;
   let drag;
   let saveTimer;
-  let storageAvailable = persistence;
+  let automaticSave = Boolean(storage);
   const past = [];
   const future = [];
   const originalRoot = captureProperties(root, ["--sm-gap"]);
@@ -225,11 +256,29 @@ export function attachStyleMatter(root, options = {}) {
     }
   }
 
+  async function persistGraph() {
+    if (!storage) return false;
+    return storage.save(storageKey, graph);
+  }
+
+  async function save() {
+    try {
+      const saved = await persistGraph();
+      if (saved) automaticSave = true;
+      else automaticSave = false;
+      draw();
+      return saved;
+    } catch (error) {
+      automaticSave = false;
+      draw();
+      throw error;
+    }
+  }
+
   function scheduleSave() {
-    if (!storageAvailable || destroyed) return;
+    if (!automaticSave || destroyed) return;
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveGraph(storageKey, graph).catch(error => {
-      status.textContent = "save failed";
+    saveTimer = setTimeout(() => save().catch(error => {
       console.warn("StyleMatter could not save", error);
     }), 120);
   }
@@ -291,7 +340,8 @@ export function attachStyleMatter(root, options = {}) {
 
     undoButton.disabled = !past.length;
     redoButton.disabled = !future.length;
-    status.textContent = `editing ${selectedId}${storageAvailable ? "" : " · memory only"}`;
+    const storageState = !storage ? " · memory only" : automaticSave ? "" : " · save paused";
+    status.textContent = `editing ${selectedId}${storageState}`;
   }
 
   let drawFrame;
@@ -408,7 +458,7 @@ export function attachStyleMatter(root, options = {}) {
     destroyed = true;
     clearTimeout(saveTimer);
     await ready;
-    if (storageAvailable) await saveGraph(storageKey, graph).catch(error => console.warn("StyleMatter could not save before detach", error));
+    if (automaticSave) await persistGraph().catch(error => console.warn("StyleMatter could not save before detach", error));
     cancelAnimationFrame(drawFrame);
     resizeObserver.disconnect();
     root.removeEventListener("pointerdown", selectFromRoot);
@@ -425,17 +475,18 @@ export function attachStyleMatter(root, options = {}) {
   applyGraph();
   draw();
   const ready = (async () => {
-    if (persistence) {
+    if (storage) {
       try {
-        graph = normalizeGraph(await loadGraph(storageKey), fallback);
+        graph = normalizeGraph(await storage.load(storageKey), fallback);
       } catch (error) {
-        storageAvailable = false;
+        automaticSave = false;
         console.warn("StyleMatter could not load saved state", error);
       }
     }
     if (!destroyed) {
       editingControls.forEach(control => { control.disabled = false; });
-      changed();
+      applyGraph();
+      draw();
     }
   })();
 
@@ -443,7 +494,7 @@ export function attachStyleMatter(root, options = {}) {
     ready,
     undo,
     redo,
-    save: () => storageAvailable ? saveGraph(storageKey, graph) : Promise.resolve(false),
+    save,
     destroy,
     get graph() { return structuredClone(graph); }
   };

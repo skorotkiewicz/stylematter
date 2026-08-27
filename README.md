@@ -2,7 +2,15 @@
 
 StyleMatter is an embedded spatial style editor for DOM elements. It uses a graph, CSS variables, and a Shadow DOM interaction layer.
 
-The current library supports shared materials, corner radius, padding, gap, undo, redo, and local persistence.
+The library supports shared materials, corner radius, padding, gap, undo, redo, and local or server persistence.
+
+## Install
+
+```bash
+npm install stylematter
+```
+
+StyleMatter is an ESM-only package.
 
 ## Run the demo
 
@@ -67,7 +75,7 @@ Add fallback values so the page keeps its design when the editor is detached.
 Attach StyleMatter only for an authorized editor.
 
 ```js
-import { attachStyleMatter } from "/assets/stylematter.js";
+import { attachStyleMatter } from "stylematter";
 
 const root = document.querySelector("#stories");
 
@@ -92,7 +100,7 @@ The editor rejects duplicate or empty `data-sm-id` values.
 const saved = await editor.save();
 ```
 
-`save()` returns `true` when IndexedDB stores the graph. It returns `false` when persistence is unavailable.
+`save()` returns `true` when the active storage adapter stores the graph. It returns `false` when persistence is unavailable.
 
 ### Undo and redo
 
@@ -129,13 +137,79 @@ const editor = attachStyleMatter(root, {
 
 This mode keeps the graph in memory until the editor is detached.
 
+## Server persistence
+
+Supply `loadGraph` and `saveGraph` together. StyleMatter uses IndexedDB when these callbacks are absent.
+
+```js
+import { attachStyleMatter } from "stylematter";
+
+const token = getShortLivedEditorToken();
+const endpoint = key => `/api/stylematter/${encodeURIComponent(key)}`;
+
+const editor = attachStyleMatter(document.querySelector("#stories"), {
+  storageKey: "stories-v1",
+
+  async loadGraph(key) {
+    const response = await fetch(endpoint(key), {
+      headers: { authorization: `Bearer ${token}` }
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Graph load failed: ${response.status}`);
+    return response.json();
+  },
+
+  async saveGraph(key, graph) {
+    const response = await fetch(endpoint(key), {
+      method: "PUT",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(graph)
+    });
+    if (!response.ok) throw new Error(`Graph save failed: ${response.status}`);
+  }
+});
+
+await editor.ready;
+```
+
+StyleMatter validates a loaded graph against the current DOM before it applies values. It passes a structured clone to `saveGraph`.
+
+The editor pauses automatic saves when `loadGraph` fails. An explicit successful `editor.save()` starts automatic saves again.
+
+### Bun reference server
+
+The package includes an authenticated SQLite server for Bun.
+
+```js
+import { createStyleMatterServer } from "stylematter/bun-server";
+
+const application = createStyleMatterServer({
+  token: process.env.STYLEMATTER_TOKEN,
+  databasePath: "stylematter.sqlite",
+  port: 3000
+});
+
+console.log(application.server.url);
+```
+
+You can also start the server from this repository:
+
+```bash
+STYLEMATTER_TOKEN="replace-with-at-least-16-characters" npm run start:server
+```
+
+The server provides `GET` and `PUT` at `/api/stylematter/:key`. It rejects invalid keys, large requests, and invalid graphs.
+
+Do not put a long-lived server token in public JavaScript. Use a short-lived editor token or place the server behind your authenticated application.
+
+Call `application.close()` during a graceful shutdown.
+
 ## Production limits
 
-The current persistence layer uses IndexedDB. The saved graph belongs to one browser and one origin.
-
-IndexedDB does not publish changes to a server. It does not share changes with other users or devices.
-
-Add a server persistence adapter before you use StyleMatter as a shared website editor. The server must authenticate users and authorize each edit.
+IndexedDB state belongs to one browser and one origin. Use server callbacks when users must share changes across browsers or devices.
 
 The current editor reads its target set when it attaches. It does not detect elements that the host adds later.
 
@@ -145,16 +219,16 @@ Do not attach the editor for ordinary site visitors.
 
 ## Verification
 
-Run the model tests:
+Run all checks:
 
 ```bash
-node --test stylematter.test.mjs
+npm test
 ```
 
-Run the Chromium lifecycle test:
+The checks cover graph validation, IndexedDB, custom adapters, Chromium interactions, authentication, SQLite persistence, restart recovery, and teardown.
+
+Inspect the npm package contents:
 
 ```bash
-node stylematter.browser-test.mjs
+npm pack --dry-run
 ```
-
-The lifecycle test covers attach, edit, pointer drag, undo, redo, save, reload, restore, detach, and reattach.
