@@ -168,6 +168,14 @@ try {
     rootGap: document.querySelector('#editableStories').style.getPropertyValue('--sm-gap'),
     nodeMaterial: document.querySelector('[data-sm-id="coast"]').style.getPropertyValue('--sm-material')
   }))()`), { host: false, rootGap: "", nodeMaterial: "" });
+
+  await cdp.evaluate(`import('./stylematter.js').then(async ({attachStyleMatter}) => {
+    window.reattachedStyleMatter=attachStyleMatter(document.querySelector('#editableStories'), {persistence:false});
+    await window.reattachedStyleMatter.ready;
+  })`, true);
+  assert.equal(await cdp.evaluate("document.querySelectorAll('[data-stylematter-editor]').length"), 1);
+  await cdp.evaluate("window.reattachedStyleMatter.destroy()", true);
+  assert.equal(await cdp.evaluate("document.querySelectorAll('[data-stylematter-editor]').length"), 0);
   assert.deepEqual(cdp.exceptions, []);
 
   console.log("Chromium lifecycle: pass");
