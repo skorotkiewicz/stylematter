@@ -269,6 +269,7 @@ export function attachStyleMatter(root, options = {}) {
     }));
 
     if (targets.length > 1) {
+      // ponytail: one gap constraint uses the first two targets; add per-container gaps when multiple layouts need editing.
       const first = targets[0].getBoundingClientRect();
       const second = targets[1].getBoundingClientRect();
       const start = first.right + 4;
@@ -399,9 +400,9 @@ export function attachStyleMatter(root, options = {}) {
   let api;
   async function destroy() {
     if (destroyed) return;
+    destroyed = true;
     clearTimeout(saveTimer);
     if (persistence) await saveGraph(storageKey, graph).catch(error => console.warn("StyleMatter could not save before detach", error));
-    destroyed = true;
     cancelAnimationFrame(drawFrame);
     resizeObserver.disconnect();
     root.removeEventListener("pointerdown", selectFromRoot);
