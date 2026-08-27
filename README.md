@@ -119,6 +119,29 @@ const graph = editor.graph;
 
 The getter returns a structured clone. Changes to the returned object do not change the editor state.
 
+A gap belongs to an explicit relationship between two node IDs:
+
+```js
+{
+  version: 2,
+  materials: { shared: "#c97856" },
+  nodes: {
+    first: { material: "shared", radius: 24, padding: 28 },
+    second: { material: "shared", radius: 24, padding: 28 }
+  },
+  relations: {
+    "gap:first:second": {
+      type: "gap",
+      from: "first",
+      to: "second",
+      value: 40
+    }
+  }
+}
+```
+
+StyleMatter migrates version 1 graphs during load. New saves use version 2.
+
 ### Detach
 
 ```js

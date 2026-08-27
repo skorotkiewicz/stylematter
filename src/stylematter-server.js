@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { timingSafeEqual } from "node:crypto";
-import { isStyleMatterGraph } from "./stylematter.js";
+import { isPersistedStyleMatterGraph } from "./stylematter.js";
 
 const API_PREFIX = "/api/stylematter/";
 const MAX_BODY_BYTES = 1_000_000;
@@ -64,7 +64,7 @@ export function createStyleMatterServer(options = {}) {
         if (!row) return response(404, "Not found");
         try {
           const graph = JSON.parse(row.graph);
-          if (!isStyleMatterGraph(graph)) throw new Error("invalid stored graph");
+          if (!isPersistedStyleMatterGraph(graph)) throw new Error("invalid stored graph");
           return Response.json(graph, { headers: { "cache-control": "no-store" } });
         } catch (error) {
           console.error("StyleMatter server found an invalid stored graph", error);
@@ -87,7 +87,7 @@ export function createStyleMatterServer(options = {}) {
         } catch {
           return response(400, "Invalid JSON");
         }
-        if (!isStyleMatterGraph(graph)) return response(422, "Invalid StyleMatter graph");
+        if (!isPersistedStyleMatterGraph(graph)) return response(422, "Invalid StyleMatter graph");
 
         upsertGraph.run(key, JSON.stringify(graph), Date.now());
         return response(204, null);

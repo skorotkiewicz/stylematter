@@ -13,11 +13,10 @@ export function colorToHex(color) {
   return `#${values.map(value => clamp(value, 0, 255).toString(16).padStart(2, "0")).join("")}`;
 }
 
-export function isStyleMatterGraph(value) {
-  if (!value || typeof value !== "object" || value.version !== 1) return false;
+function hasValidMaterialsAndNodes(value) {
+  if (!value || typeof value !== "object") return false;
   if (!value.materials || typeof value.materials !== "object" || Array.isArray(value.materials)) return false;
   if (!value.nodes || typeof value.nodes !== "object" || Array.isArray(value.nodes)) return false;
-  if (!Number.isFinite(value.gap) || value.gap < 0 || value.gap > 200) return false;
 
   const materials = Object.entries(value.materials);
   const nodes = Object.entries(value.nodes);
@@ -33,9 +32,33 @@ export function isStyleMatterGraph(value) {
   );
 }
 
+function isLegacyStyleMatterGraph(value) {
+  return value?.version === 1 && hasValidMaterialsAndNodes(value) && Number.isFinite(value.gap) && value.gap >= 0 && value.gap <= 200;
+}
+
+export function isStyleMatterGraph(value) {
+  if (value?.version !== 2 || !hasValidMaterialsAndNodes(value)) return false;
+  if (!value.relations || typeof value.relations !== "object" || Array.isArray(value.relations)) return false;
+  const relations = Object.entries(value.relations);
+  if (relations.length > 10000) return false;
+  return relations.every(([id, relation]) =>
+    id &&
+    relation?.type === "gap" &&
+    relation.from !== relation.to &&
+    Object.hasOwn(value.nodes, relation.from) &&
+    Object.hasOwn(value.nodes, relation.to) &&
+    Number.isFinite(relation.value) && relation.value >= 0 && relation.value <= 200
+  );
+}
+
+export function isPersistedStyleMatterGraph(value) {
+  return isStyleMatterGraph(value) || isLegacyStyleMatterGraph(value);
+}
+
 export function normalizeGraph(saved, fallback) {
+  if (!isStyleMatterGraph(fallback)) throw new TypeError("StyleMatter requires a valid version 2 fallback graph");
   const graph = structuredClone(fallback);
-  if (!saved || saved.version !== 1 || typeof saved !== "object") return graph;
+  if (!saved || typeof saved !== "object" || (saved.version !== 1 && saved.version !== 2)) return graph;
 
   for (const material of Object.keys(graph.materials)) {
     const value = saved.materials?.[material];
@@ -49,7 +72,11 @@ export function normalizeGraph(saved, fallback) {
     if (Number.isFinite(candidate.padding)) node.padding = clamp(candidate.padding, 0, 120);
   }
 
-  if (Number.isFinite(saved.gap)) graph.gap = clamp(saved.gap, 0, 200);
+  for (const [id, relation] of Object.entries(graph.relations)) {
+    const candidate = saved.version === 1 ? { ...relation, value: saved.gap } : saved.relations?.[id];
+    if (!candidate || candidate.type !== relation.type || candidate.from !== relation.from || candidate.to !== relation.to) continue;
+    if (Number.isFinite(candidate.value)) relation.value = clamp(candidate.value, 0, 200);
+  }
   return graph;
 }
 
@@ -90,6 +117,7 @@ async function saveIndexedDbGraph(key, graph) {
 function createInitialGraph(root, targets) {
   const materials = {};
   const nodes = {};
+  const relations = {};
 
   for (const target of targets) {
     const id = target.dataset.smId;
@@ -103,13 +131,19 @@ function createInitialGraph(root, targets) {
     };
   }
 
-  const rootStyle = getComputedStyle(root);
-  return {
-    version: 1,
-    materials,
-    nodes,
-    gap: clamp(parseFloat(rootStyle.columnGap || rootStyle.gap) || 0, 0, 200)
-  };
+  if (targets.length > 1 && targets[0].parentElement === targets[1].parentElement) {
+    const from = targets[0].dataset.smId;
+    const to = targets[1].dataset.smId;
+    const containerStyle = getComputedStyle(targets[0].parentElement || root);
+    relations[`gap:${from}:${to}`] = {
+      type: "gap",
+      from,
+      to,
+      value: clamp(parseFloat(containerStyle.columnGap || containerStyle.gap) || 0, 0, 200)
+    };
+  }
+
+  return { version: 2, materials, nodes, relations };
 }
 
 function captureProperties(element, properties) {
@@ -220,7 +254,8 @@ export function attachStyleMatter(root, options = {}) {
   let automaticSave = Boolean(storage);
   const past = [];
   const future = [];
-  const originalRoot = captureProperties(root, ["--sm-gap"]);
+  const layoutElements = new Set(targets.map(target => target.parentElement).filter(element => element && (element === root || root.contains(element))));
+  const originalLayouts = new Map([...layoutElements].map(element => [element, captureProperties(element, ["--sm-gap"])]));
   const originalTargets = new Map(targets.map(target => [target, captureProperties(target, STYLE_PROPERTIES)]));
 
   const host = document.createElement("div");
@@ -247,8 +282,19 @@ export function attachStyleMatter(root, options = {}) {
     return graph.nodes[selectedId];
   }
 
+  function activeGapRelation() {
+    return Object.values(graph.relations).find(relation => relation.type === "gap");
+  }
+
   function applyGraph() {
-    root.style.setProperty("--sm-gap", `${graph.gap}px`);
+    for (const relation of Object.values(graph.relations)) {
+      if (relation.type !== "gap") continue;
+      const from = byId.get(relation.from);
+      const to = byId.get(relation.to);
+      if (from?.parentElement && from.parentElement === to?.parentElement) {
+        from.parentElement.style.setProperty("--sm-gap", `${relation.value}px`);
+      }
+    }
     for (const [id, node] of Object.entries(graph.nodes)) {
       const target = byId.get(id);
       if (!target) continue;
@@ -306,7 +352,6 @@ export function attachStyleMatter(root, options = {}) {
     padding.style.top = `${rect.top + rect.height / 2 - 22}px`;
     corner.setAttribute("aria-valuenow", node.radius);
     padding.setAttribute("aria-valuenow", node.padding);
-    gap.setAttribute("aria-valuenow", graph.gap);
 
     const linkedTargets = Object.entries(graph.nodes)
       .filter(([, candidate]) => candidate.material === node.material)
@@ -324,16 +369,20 @@ export function attachStyleMatter(root, options = {}) {
       return path;
     }));
 
-    if (targets.length > 1) {
-      // ponytail: one gap constraint uses the first two targets; add per-container gaps when multiple layouts need editing.
-      const first = targets[0].getBoundingClientRect();
-      const second = targets[1].getBoundingClientRect();
+    const gapRelation = activeGapRelation();
+    const from = gapRelation && byId.get(gapRelation.from);
+    const to = gapRelation && byId.get(gapRelation.to);
+    if (from && to) {
+      // ponytail: the editor exposes the first gap relation; add relation selection when one graph contains multiple gaps.
+      const first = from.getBoundingClientRect();
+      const second = to.getBoundingClientRect();
       const start = first.right + 4;
       const end = second.left - 4;
       const y = first.top + first.height * .56;
       spring.setAttribute("d", springPath(start, end, y));
       gap.style.left = `${(start + end) / 2 - 16}px`;
       gap.style.top = `${y - 16}px`;
+      gap.setAttribute("aria-valuenow", gapRelation.value);
       gap.hidden = false;
     } else {
       spring.removeAttribute("d");
@@ -395,7 +444,7 @@ export function attachStyleMatter(root, options = {}) {
       kind,
       x: event.clientX,
       y: event.clientY,
-      value: kind === "gap" ? graph.gap : node[kind]
+      value: kind === "gap" ? activeGapRelation().value : node[kind]
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -403,7 +452,7 @@ export function attachStyleMatter(root, options = {}) {
   function continueDrag(event) {
     if (!drag || event.pointerId !== drag.pointerId) return;
     const node = selectedNode();
-    if (drag.kind === "gap") graph.gap = clamp(drag.value + event.clientX - drag.x, 0, 200);
+    if (drag.kind === "gap") activeGapRelation().value = clamp(drag.value + event.clientX - drag.x, 0, 200);
     if (drag.kind === "padding") node.padding = clamp(drag.value + event.clientX - drag.x, 0, 120);
     if (drag.kind === "radius") {
       const inward = (drag.x - event.clientX + event.clientY - drag.y) / 2;
@@ -426,8 +475,10 @@ export function attachStyleMatter(root, options = {}) {
     checkpoint();
     const increase = event.key === "ArrowRight" || event.key === "ArrowUp";
     const amount = (event.shiftKey ? 10 : 2) * (increase ? 1 : -1);
-    if (kind === "gap") graph.gap = clamp(graph.gap + amount, 0, 200);
-    else selectedNode()[kind] = clamp(selectedNode()[kind] + amount, 0, 120);
+    if (kind === "gap") {
+      const relation = activeGapRelation();
+      relation.value = clamp(relation.value + amount, 0, 200);
+    } else selectedNode()[kind] = clamp(selectedNode()[kind] + amount, 0, 120);
     changed();
   }
 
@@ -466,7 +517,7 @@ export function attachStyleMatter(root, options = {}) {
     root.removeEventListener("pointerdown", selectFromRoot);
     window.removeEventListener("resize", queueDraw);
     window.removeEventListener("scroll", queueDraw, { capture: true });
-    restoreProperties(root, originalRoot);
+    for (const [layout, values] of originalLayouts) restoreProperties(layout, values);
     for (const [target, values] of originalTargets) restoreProperties(target, values);
     host.remove();
     ACTIVE_ROOTS.delete(root);

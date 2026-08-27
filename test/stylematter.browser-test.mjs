@@ -134,23 +134,25 @@ try {
     }
   })()`);
   assert.deepEqual(await cdp.evaluate("window.styleMatter.graph"), {
-    version: 1,
+    version: 2,
     materials: { "story-surface": "#4f9b80" },
     nodes: {
       coast: { material: "story-surface", radius: 26, padding: 32 },
       gardens: { material: "story-surface", radius: 28, padding: 34 }
     },
-    gap: 46
+    relations: {
+      "gap:coast:gardens": { type: "gap", from: "coast", to: "gardens", value: 46 }
+    }
   });
   assert.equal(await cdp.evaluate("window.styleMatter.undo()"), true);
-  assert.equal((await cdp.evaluate("window.styleMatter.graph")).gap, 44);
+  assert.equal((await cdp.evaluate("window.styleMatter.graph")).relations["gap:coast:gardens"].value, 44);
   assert.equal(await cdp.evaluate("window.styleMatter.redo()"), true);
 
   await drag("document.querySelector('[data-stylematter-editor]').shadowRoot.querySelector('.corner')", -10, 10);
   await drag("document.querySelector('[data-stylematter-editor]').shadowRoot.querySelector('.gap')", 20, 0);
   const edited = await cdp.evaluate("window.styleMatter.graph");
   assert.equal(edited.nodes.gardens.radius, 38);
-  assert.equal(edited.gap, 66);
+  assert.equal(edited.relations["gap:coast:gardens"].value, 66);
   assert.equal(await cdp.evaluate("getComputedStyle(document.querySelector('[data-sm-id=\"coast\"]')).getPropertyValue('--sm-material').trim()"), "#4f9b80");
 
   assert.equal(await cdp.evaluate("window.styleMatter.save()", true), true);
@@ -160,7 +162,7 @@ try {
   assert.equal(restored.materials["story-surface"], "#4f9b80");
   assert.equal(restored.nodes.gardens.radius, 38);
   assert.equal(restored.nodes.gardens.padding, 34);
-  assert.equal(restored.gap, 66);
+  assert.equal(restored.relations["gap:coast:gardens"].value, 66);
 
   await cdp.evaluate("window.styleMatter.destroy()", true);
   assert.deepEqual(await cdp.evaluate(`(() => ({
@@ -188,7 +190,7 @@ try {
   assert.equal(await cdp.evaluate("window.reattachedStyleMatter.save()", true), true);
   const adapterSave = await cdp.evaluate("window.adapterEvents.saves.at(-1)");
   assert.equal(adapterSave.key, "server-stories");
-  assert.equal(adapterSave.graph.gap, 68);
+  assert.equal(adapterSave.graph.relations["gap:coast:gardens"].value, 68);
   await cdp.evaluate("window.reattachedStyleMatter.destroy()", true);
   assert.equal(await cdp.evaluate("document.querySelectorAll('[data-stylematter-editor]').length"), 0);
 

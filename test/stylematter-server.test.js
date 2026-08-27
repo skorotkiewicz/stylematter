@@ -9,13 +9,22 @@ const authorization = { authorization: `Bearer ${token}` };
 const temporaryDirectories = [];
 
 const graph = {
-  version: 1,
+  version: 2,
   materials: { shared: "#c97856" },
   nodes: {
     first: { material: "shared", radius: 24, padding: 28 },
     second: { material: "shared", radius: 24, padding: 28 }
   },
-  gap: 40
+  relations: {
+    "gap:first:second": { type: "gap", from: "first", to: "second", value: 40 }
+  }
+};
+
+const legacyGraph = {
+  version: 1,
+  materials: structuredClone(graph.materials),
+  nodes: structuredClone(graph.nodes),
+  gap: 32
 };
 
 afterEach(async () => {
@@ -48,6 +57,14 @@ test("authenticates, validates, and persists graphs across restarts", async () =
     body: JSON.stringify(graph)
   })).status).toBe(204);
   expect(await (await fetch(endpoint, { headers: authorization })).json()).toEqual(graph);
+
+  const legacyEndpoint = new URL("/api/stylematter/legacy", application.server.url);
+  expect((await fetch(legacyEndpoint, {
+    method: "PUT",
+    headers: { ...authorization, "content-type": "application/json" },
+    body: JSON.stringify(legacyGraph)
+  })).status).toBe(204);
+  expect(await (await fetch(legacyEndpoint, { headers: authorization })).json()).toEqual(legacyGraph);
 
   application.close();
   application = createStyleMatterServer({ token, databasePath, port: 0 });
