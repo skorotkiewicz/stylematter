@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StyleMatter responsive realities prototype</title>
+  <style>
+    /* PROTOTYPE: archive or delete after testing responsive manipulation. */
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      color: #292720;
+      background: #eee9de;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background:
+        linear-gradient(rgba(47, 44, 36, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47, 44, 36, .04) 1px, transparent 1px),
+        #eee9de;
+      background-size: 24px 24px;
+    }
+
+    button { font: inherit; }
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 42px 0 64px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 32px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font: 500 clamp(2.7rem, 7vw, 5.6rem)/.88 Georgia, serif;
+      letter-spacing: -.055em;
+    }
+
+    .intro {
+      max-width: 35rem;
+      margin: 0;
+      color: #625d53;
+      line-height: 1.55;
+    }
+
+    .stage-scroll {
+      margin: 0 -8px;
+      padding: 8px 8px 22px;
+      overflow-x: auto;
+    }
+
+    .stage {
+      position: relative;
+      width: max(950px, 100%);
+      min-height: 650px;
+      padding: 28px;
+      overflow: hidden;
+      border: 1px solid #c9c0b1;
+      border-radius: 28px;
+      background: rgba(255, 253, 247, .95);
+      box-shadow: 0 24px 70px rgba(67, 56, 40, .13);
+      user-select: none;
+    }
+
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border: 1px dashed #c9c0b1;
+      border-radius: 20px;
+      pointer-events: none;
+    }
+
+    .stage-label {
+      position: relative;
+      margin: 0;
+      color: #777064;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .stage-title {
+      position: relative;
+      margin: 4px 0 0;
+      font: 500 1.75rem/1.1 Georgia, serif;
+    }
+
+    .hint {
+      position: relative;
+      margin: 10px 0 0;
+      color: #756f64;
+      font-size: .82rem;
+    }
+
+    .responsive-space {
+      position: relative;
+      width: 900px;
+      height: 490px;
+      margin-top: 24px;
+    }
+
+    .max-outline {
+      position: absolute;
+      left: 38px;
+      top: 10px;
+      width: 824px;
+      height: 404px;
+      border: 1px dashed #bcb1a1;
+      border-radius: 20px;
+      pointer-events: none;
+    }
+
+    .viewport {
+      --fluid-gap: 26px;
+      --fluid-pad: 26px;
+      --fluid-title: 2.2rem;
+      position: absolute;
+      left: 40px;
+      top: 12px;
+      width: 760px;
+      height: 400px;
+      overflow: hidden;
+      border: 3px solid #176b63;
+      border-radius: 18px;
+      background: #f8f5ec;
+      box-shadow: 0 15px 32px rgba(40, 51, 45, .15);
+    }
+
+    .mini-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--fluid-gap);
+      min-height: 54px;
+      padding: 0 var(--fluid-pad);
+      border-bottom: 1px solid #cfc6b8;
+      background: #fffdf7;
+    }
+
+    .brand {
+      color: #176b63;
+      font: 700 1rem/1 Georgia, serif;
+      white-space: nowrap;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: var(--fluid-gap);
+      color: #655f55;
+      font-size: .7rem;
+      font-weight: 750;
+    }
+
+    .nav-links span { white-space: nowrap; }
+
+    .mini-page {
+      padding: var(--fluid-pad);
+    }
+
+    .mini-hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: var(--fluid-gap);
+      margin-bottom: var(--fluid-gap);
+    }
+
+    .mini-hero h3 {
+      max-width: 11em;
+      margin: 0;
+      color: #2c2a24;
+      font: 500 var(--fluid-title)/.95 Georgia, serif;
+      letter-spacing: -.035em;
+    }
+
+    .mini-hero p {
+      max-width: 20em;
+      margin: 0;
+      color: #6d665c;
+      font-size: .72rem;
+      line-height: 1.45;
+    }
+
+    .mini-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--fluid-gap);
+    }
+
+    .mini-card {
+      min-width: 0;
+      min-height: 150px;
+      padding: var(--fluid-pad);
+      border: 1px solid #c7bcac;
+      border-radius: 14px;
+      background: #fffdf7;
+      box-shadow: 0 6px 16px rgba(54, 47, 36, .08);
+    }
+
+    .mini-card b {
+      display: block;
+      margin-bottom: 8px;
+      color: #176b63;
+      font: 500 1.2rem/1 Georgia, serif;
+    }
+
+    .mini-card span {
+      color: #756d62;
+      font-size: .7rem;
+      line-height: 1.4;
+    }
+
+    .mini-card i {
+      display: block;
+      width: 34px;
+      height: 6px;
+      margin-top: 18px;
+      border-radius: 99px;
+      background: #cc704f;
+    }
+
+    .viewport.stack .nav-links span { display: none; }
+
+    .viewport.stack .nav-links::after {
+      content: "•••";
+      color: #176b63;
+      letter-spacing: .12em;
+    }
+
+    .viewport.stack .mini-hero {
+      display: block;
+      margin-bottom: var(--fluid-gap);
+    }
+
+    .viewport.stack .mini-hero p {
+      margin-top: 8px;
+    }
+
+    .viewport.stack .mini-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .viewport.stack .mini-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      min-height: 88px;
+    }
+
+    .viewport.stack .mini-card span,
+    .viewport.stack .mini-card i { display: none; }
+
+    .edge-handle,
+    .topology-pin {
+      position: absolute;
+      z-index: 7;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 3px solid #176b63;
+      color: #fffdf7;
+      background: #176b63;
+      box-shadow: 0 5px 14px rgba(25, 76, 70, .25);
+      touch-action: none;
+    }
+
+    .edge-handle {
+      top: 178px;
+      width: 28px;
+      height: 68px;
+      border-radius: 14px;
+      cursor: ew-resize;
+    }
+
+    .edge-handle::before {
+      content: "↔";
+      font-size: .75rem;
+      font-weight: 900;
+      transform: rotate(90deg);
+    }
+
+    .width-track {
+      position: absolute;
+      left: 400px;
+      top: 444px;
+      width: 460px;
+      height: 4px;
+      border-radius: 99px;
+      background: #c9c0b1;
+    }
+
+    .width-track::before,
+    .width-track::after {
+      content: "";
+      position: absolute;
+      top: -4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #948a7c;
+    }
+
+    .width-track::before { left: -6px; }
+    .width-track::after { right: -6px; }
+
+    .topology-pin {
+      top: 427px;
+      width: 34px;
+      height: 34px;
+      border-color: #bd7b10;
+      border-radius: 50% 50% 50% 8px;
+      background: #bd7b10;
+      cursor: ew-resize;
+      transform: rotate(-45deg);
+    }
+
+    .topology-pin::before {
+      content: "↕";
+      font-size: .75rem;
+      font-weight: 900;
+      transform: rotate(45deg);
+    }
+
+    .edge-handle.dragging { transform: scale(1.06); }
+    .topology-pin.dragging { transform: rotate(-45deg) scale(1.08); }
+
+    .topology-mark {
+      position: absolute;
+      top: 409px;
+      width: 2px;
+      height: 42px;
+      border-left: 2px dashed #bd7b10;
+      pointer-events: none;
+    }
+
+    button:focus-visible {
+      outline: 4px solid #bd7b10;
+      outline-offset: 4px;
+    }
+
+    .state {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      color: #5d584f;
+      font: 700 .72rem/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .state span {
+      padding: 8px 10px;
+      border: 1px solid #d0c7b9;
+      border-radius: 999px;
+      background: #faf7ef;
+    }
+
+    @media (max-width: 720px) {
+      .shell { padding-top: 28px; }
+      header { display: block; }
+      .intro { margin-top: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>Squeeze the world</h1>
+      <p class="intro">
+        Pull the page edge and watch its relationships respond continuously.
+        Move the gold stop to choose where the arrangement changes shape.
+      </p>
+    </header>
+
+    <div class="stage-scroll">
+      <section class="stage" id="stage" aria-label="Responsive manipulation experiment">
+        <p class="stage-label">StyleMatter experiment 04</p>
+        <h2 class="stage-title">One design across many realities</h2>
+        <p class="hint">Pull the green edge. Pull the gold stop beneath it. Arrow keys work when either control is focused.</p>
+
+        <div class="responsive-space">
+          <div class="max-outline"></div>
+
+          <article class="viewport" id="viewport">
+            <nav class="mini-topbar">
+              <span class="brand">Common Ground</span>
+              <div class="nav-links"><span>Journal</span><span>Places</span><span>About</span></div>
+            </nav>
+            <div class="mini-page">
+              <div class="mini-hero">
+                <h3>Notes from a changing coast</h3>
+                <p>A field journal about water, weather, and the people measuring both.</p>
+              </div>
+              <div class="mini-cards">
+                <article class="mini-card"><div><b>High-water marks</b><span>Records cut into stone, timber, and memory.</span></div><i></i></article>
+                <article class="mini-card"><div><b>Moving gardens</b><span>Planting around a shoreline that will not stay still.</span></div><i></i></article>
+              </div>
+            </div>
+          </article>
+
+          <button class="edge-handle" id="edgeHandle" type="button" role="slider" aria-label="Viewport width" aria-valuemin="360" aria-valuemax="820" aria-valuenow="760"></button>
+          <div class="width-track" aria-hidden="true"></div>
+          <div class="topology-mark" id="topologyMark" aria-hidden="true"></div>
+          <button class="topology-pin" id="topologyPin" type="button" role="slider" aria-label="Layout transition width" aria-valuemin="400" aria-valuemax="740" aria-valuenow="560"></button>
+        </div>
+      </section>
+    </div>
+
+    <output class="state" aria-label="Prototype state" aria-live="polite">
+      <span id="widthState"></span>
+      <span id="gapState"></span>
+      <span id="realityState"></span>
+      <span id="stopState"></span>
+    </output>
+  </main>
+
+  <script>
+    const viewport = document.querySelector("#viewport");
+    const edgeHandle = document.querySelector("#edgeHandle");
+    const topologyPin = document.querySelector("#topologyPin");
+    const topologyMark = document.querySelector("#topologyMark");
+
+    const graph = {
+      width: 760,
+      breakpoint: 560
+    };
+
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, Math.round(value)));
+
+    function layoutFor(width, breakpoint) {
+      const progress = (clamp(width, 360, 820) - 360) / 460;
+      return {
+        stack: width <= breakpoint,
+        gap: 12 + Math.round(progress * 20),
+        padding: 14 + Math.round(progress * 16),
+        title: 1.6 + progress * .8
+      };
+    }
+
+    console.assert(layoutFor(400, 560).stack && !layoutFor(700, 560).stack, "topology failed");
+
+    function render() {
+      const layout = layoutFor(graph.width, graph.breakpoint);
+      viewport.style.width = `${graph.width}px`;
+      viewport.style.setProperty("--fluid-gap", `${layout.gap}px`);
+      viewport.style.setProperty("--fluid-pad", `${layout.padding}px`);
+      viewport.style.setProperty("--fluid-title", `${layout.title.toFixed(2)}rem`);
+      viewport.classList.toggle("stack", layout.stack);
+
+      edgeHandle.style.left = `${40 + graph.width - 14}px`;
+      topologyPin.style.left = `${40 + graph.breakpoint - 17}px`;
+      topologyMark.style.left = `${40 + graph.breakpoint}px`;
+      edgeHandle.setAttribute("aria-valuenow", graph.width);
+      topologyPin.setAttribute("aria-valuenow", graph.breakpoint);
+
+      document.querySelector("#widthState").textContent = `world ${graph.width}px`;
+      document.querySelector("#gapState").textContent = `breathing ${layout.gap}px`;
+      document.querySelector("#realityState").textContent = `reality ${layout.stack ? "stack" : "row"}`;
+      document.querySelector("#stopState").textContent = `stop ${graph.breakpoint}px`;
+    }
+
+    let drag;
+    function beginDrag(event, kind) {
+      drag = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        kind,
+        value: kind === "width" ? graph.width : graph.breakpoint
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      event.currentTarget.classList.add("dragging");
+    }
+
+    function continueDrag(event) {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const value = drag.value + event.clientX - drag.x;
+      if (drag.kind === "width") graph.width = clamp(value, 360, 820);
+      if (drag.kind === "breakpoint") graph.breakpoint = clamp(value, 400, 740);
+      render();
+    }
+
+    function endDrag(event) {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    function clearDrag(event) {
+      drag = undefined;
+      event.currentTarget.classList.remove("dragging");
+    }
+
+    function changeWithKeys(event, kind) {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const amount = (event.shiftKey ? 40 : 10) * (event.key === "ArrowRight" ? 1 : -1);
+      if (kind === "width") graph.width = clamp(graph.width + amount, 360, 820);
+      if (kind === "breakpoint") graph.breakpoint = clamp(graph.breakpoint + amount, 400, 740);
+      render();
+    }
+
+    [[edgeHandle, "width"], [topologyPin, "breakpoint"]].forEach(([handle, kind]) => {
+      handle.addEventListener("pointerdown", event => beginDrag(event, kind));
+      handle.addEventListener("pointermove", continueDrag);
+      handle.addEventListener("pointerup", endDrag);
+      handle.addEventListener("lostpointercapture", clearDrag);
+      handle.addEventListener("keydown", event => changeWithKeys(event, kind));
+    });
+
+    render();
+  </script>
+</body>
+</html>
