@@ -1,607 +1,172 @@
- <!doctype html>
- <html lang="en">
- <head>
-   <meta charset="utf-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1">
-   <title>StyleMatter prototype</title>
-   <style>
-     /* PROTOTYPE: throw this file away after testing the interaction model. */
-     :root {
-       color-scheme: light;
-       font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-       color: #25231f;
-       background: #f2eee5;
-     }
-
-     * { box-sizing: border-box; }
-
-     body {
-       margin: 0;
-       min-width: 320px;
-       background:
-         linear-gradient(rgba(37, 35, 31, .035) 1px, transparent 1px),
-         linear-gradient(90deg, rgba(37, 35, 31, .035) 1px, transparent 1px),
-         #f2eee5;
-       background-size: 24px 24px;
-     }
-
-     button, input { font: inherit; }
-
-     .shell {
-       width: min(1100px, calc(100% - 32px));
-       margin: 0 auto;
-       padding: 48px 0 72px;
-     }
-
-     header {
-       display: flex;
-       align-items: end;
-       justify-content: space-between;
-       gap: 32px;
-       margin-bottom: 24px;
-     }
-
-     h1 {
-       margin: 0;
-       font-family: Georgia, serif;
-       font-size: clamp(2.5rem, 7vw, 5.5rem);
-       font-weight: 500;
-       line-height: .9;
-       letter-spacing: -.055em;
-     }
-
-     .intro {
-       max-width: 34rem;
-       margin: 0;
-       color: #625e55;
-       line-height: 1.55;
-     }
-
-     .stage-scroll {
-       overflow-x: auto;
-       padding: 8px 8px 24px;
-       margin: 0 -8px;
-     }
-
-     .stage {
-       --flow-ink: #176b63;
-       --shared-material: #ce6847;
-       position: relative;
-       width: max(820px, 100%);
-       min-height: 570px;
-       padding: 28px;
-       overflow: hidden;
-       border: 1px solid #c9c0b1;
-       border-radius: 28px;
-       background: rgba(255, 253, 247, .94);
-       box-shadow: 0 24px 70px rgba(67, 56, 40, .12);
-       color: var(--flow-ink);
-     }
-
-     .stage::before {
-       content: "";
-       position: absolute;
-       inset: 12px;
-       border: 1px dashed color-mix(in srgb, var(--flow-ink) 30%, transparent);
-       border-radius: 20px;
-       pointer-events: none;
-     }
-
-     .stage-label {
-       position: relative;
-       margin: 0 0 4px;
-       color: #777064;
-       font-size: .72rem;
-       font-weight: 750;
-       letter-spacing: .14em;
-       text-transform: uppercase;
-     }
-
-     .stage-title {
-       position: relative;
-       margin: 0;
-       color: #292720;
-       font: 500 1.8rem/1.1 Georgia, serif;
-     }
-
-     .sources {
-       position: relative;
-       display: flex;
-       justify-content: space-between;
-       align-items: start;
-       margin: 28px 40px 70px;
-     }
-
-     .orb-control {
-       display: grid;
-       justify-items: center;
-       gap: 9px;
-       color: #514c43;
-       font-size: .75rem;
-       font-weight: 700;
-       letter-spacing: .04em;
-       cursor: pointer;
-     }
-
-     .orb {
-       width: 58px;
-       height: 58px;
-       padding: 0;
-       overflow: hidden;
-       appearance: none;
-       border: 0;
-       border-radius: 50%;
-       background: transparent;
-       box-shadow: 0 0 0 7px #fffdf7, 0 0 0 9px currentColor, 0 9px 24px rgba(52, 43, 31, .2);
-       cursor: pointer;
-     }
-
-     .orb::-webkit-color-swatch-wrapper { padding: 0; }
-     .orb::-webkit-color-swatch { border: 0; border-radius: 50%; }
-     .orb::-moz-color-swatch { border: 0; border-radius: 50%; }
-     .orb:focus-visible { outline: 4px solid #d49a2a; outline-offset: 10px; }
-
-     .flow-source { color: var(--flow-ink); }
-     .material-source { color: var(--shared-material); }
-
-     .card-row {
-       --gap: 46px;
-       position: relative;
-       display: grid;
-       grid-template-columns: 300px 300px;
-       gap: var(--gap);
-       width: max-content;
-       margin-left: 50px;
-     }
-
-     .card {
-       --local-ink: var(--flow-ink);
-       position: relative;
-       min-height: 250px;
-       padding: 25px;
-       border: 2px solid var(--local-ink);
-       border-radius: 21px;
-       color: var(--local-ink);
-       background: color-mix(in srgb, var(--shared-material) 16%, #fffdf7);
-       box-shadow: 0 14px 30px rgba(50, 42, 31, .1);
-       transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
-     }
-
-     .card::before {
-       content: "";
-       position: absolute;
-       inset: 0 0 auto;
-       height: 11px;
-       border-radius: 18px 18px 0 0;
-       background: var(--shared-material);
-     }
-
-     .card.blocked { --local-ink: #a83f2d; }
-
-     .card-number {
-       display: block;
-       margin-bottom: 24px;
-       color: #6d675d;
-       font-size: .72rem;
-       font-weight: 800;
-       letter-spacing: .14em;
-       text-transform: uppercase;
-     }
-
-     .card h2 {
-       margin: 0 0 12px;
-       color: inherit;
-       font: 500 2rem/1 Georgia, serif;
-     }
-
-     .card p {
-       margin: 0 0 28px;
-       color: #555046;
-       line-height: 1.5;
-     }
-
-     .card-action {
-       display: inline-block;
-       padding: 10px 15px;
-       border-radius: 999px;
-       color: #fffdf7;
-       background: var(--local-ink);
-       font-size: .8rem;
-       font-weight: 750;
-     }
-
-     .gate {
-       position: absolute;
-       top: -18px;
-       right: 20px;
-       width: 40px;
-       height: 40px;
-       padding: 8px;
-       border: 2px solid currentColor;
-       border-radius: 50%;
-       color: var(--local-ink);
-       background: #fffdf7;
-       cursor: pointer;
-       box-shadow: 0 5px 12px rgba(50, 42, 31, .14);
-     }
-
-     .gate::before,
-     .gate::after {
-       content: "";
-       position: absolute;
-       top: 8px;
-       bottom: 8px;
-       width: 3px;
-       border-radius: 2px;
-       background: currentColor;
-       transition: transform 160ms ease;
-     }
-
-     .gate::before { left: 11px; }
-     .gate::after { right: 11px; }
-     .gate[aria-pressed="true"]::before { transform: translateX(6px) rotate(45deg); }
-     .gate[aria-pressed="true"]::after { transform: translateX(-6px) rotate(-45deg); }
-     .gate:focus-visible { outline: 4px solid #d49a2a; outline-offset: 3px; }
-
-     .legend {
-       display: grid;
-       grid-template-columns: repeat(3, 1fr);
-       gap: 1px;
-       margin-top: 18px;
-       overflow: hidden;
-       border: 1px solid #c9c0b1;
-       border-radius: 16px;
-       background: #c9c0b1;
-     }
-
-     .legend div {
-       min-height: 92px;
-       padding: 17px;
-       background: #faf7ef;
-     }
-
-     .legend strong {
-       display: block;
-       margin-bottom: 5px;
-       font-size: .82rem;
-     }
-
-     .legend span {
-       color: #6c665c;
-       font-size: .78rem;
-       line-height: 1.4;
-     }
-
-     .state {
-       display: flex;
-       flex-wrap: wrap;
-       gap: 8px;
-       margin-top: 14px;
-       color: #5d584f;
-       font: 700 .72rem/1 ui-monospace, SFMono-Regular, Consolas, monospace;
-     }
-
-     .state span {
-       padding: 8px 10px;
-       border: 1px solid #d6cec1;
-       border-radius: 999px;
-       background: #faf7ef;
-     }
-
-     .overlay {
-       position: absolute;
-       inset: 0;
-       z-index: 20;
-       width: 100%;
-       height: 100%;
-       overflow: visible;
-       pointer-events: none;
-     }
-
-     .link {
-       fill: none;
-       stroke-linecap: round;
-       stroke-width: 2.5;
-       opacity: .7;
-     }
-
-     .material-link { stroke: var(--shared-material); }
-     .flow-link { stroke: var(--flow-ink); stroke-dasharray: 4 8; }
-     .flow-link.blocked { stroke: #a83f2d; stroke-dasharray: 2 7; }
-     .spring { fill: none; stroke: #c48719; stroke-width: 3; stroke-linejoin: round; }
-
-     .spring-handle {
-       position: absolute;
-       z-index: 21;
-       display: grid;
-       place-items: center;
-       width: 30px;
-       height: 30px;
-       padding: 0;
-       border: 3px solid #c48719;
-       border-radius: 50%;
-       color: #6b4a0e;
-       background: #fff8df;
-       box-shadow: 0 4px 12px rgba(79, 58, 19, .22);
-       cursor: ew-resize;
-       touch-action: none;
-     }
-
-     .spring-handle::before {
-       content: "↔";
-       font-size: .78rem;
-       font-weight: 900;
-     }
-
-     .spring-handle:focus-visible { outline: 4px solid #176b63; outline-offset: 3px; }
-     .spring-handle.dragging { cursor: grabbing; transform: scale(1.08); }
-
-     .sr-only {
-       position: absolute;
-       width: 1px;
-       height: 1px;
-       padding: 0;
-       margin: -1px;
-       overflow: hidden;
-       clip: rect(0, 0, 0, 0);
-       white-space: nowrap;
-       border: 0;
-     }
-
-     @media (max-width: 720px) {
-       .shell { padding-top: 28px; }
-       header { display: block; }
-       .intro { margin-top: 18px; }
-       .legend { grid-template-columns: 1fr; }
-     }
-
-     @media (prefers-reduced-motion: reduce) {
-       .card, .gate::before, .gate::after { transition: none; }
-     }
-   </style>
- </head>
- <body>
-   <main class="shell">
-     <header>
-       <h1>StyleMatter</h1>
-       <p class="intro">
-         A throwaway spatial styling experiment. Pull the spring, change either orb,
-         and close the gate on the second card.
-       </p>
-     </header>
-
-     <div class="stage-scroll">
-       <section class="stage" id="stage" aria-label="StyleMatter interaction stage">
-         <p class="stage-label">Live constraint graph</p>
-         <h2 class="stage-title">Properties as things and connections</h2>
-
-         <div class="sources">
-           <label class="orb-control flow-source">
-             <input class="orb" id="flowOrb" type="color" value="#176b63">
-             <span>Inherited ink</span>
-           </label>
-           <label class="orb-control material-source">
-             <input class="orb" id="materialOrb" type="color" value="#ce6847">
-             <span>Shared material</span>
-           </label>
-         </div>
-
-         <div class="card-row" id="cardRow">
-           <article class="card" id="cardA">
-             <span class="card-number">Object 01</span>
-             <h2>Linked object</h2>
-             <p>Its surface comes from the material orb. Its ink flows down from the stage.</p>
-             <span class="card-action">Inherited action</span>
-           </article>
-
-           <article class="card" id="cardB">
-             <button class="gate" id="flowGate" type="button" aria-pressed="false">
-               <span class="sr-only">Block inherited ink on object 02</span>
-             </button>
-             <span class="card-number">Object 02</span>
-             <h2>Same source</h2>
-             <p>Close the gate to stop one property and replace it with a local value.</p>
-             <span class="card-action">Inherited action</span>
-           </article>
-         </div>
-
-         <svg class="overlay" id="overlay" aria-hidden="true">
-           <path class="link flow-link" id="flowLinkA"/>
-           <path class="link flow-link" id="flowLinkB"/>
-           <path class="link material-link" id="materialLinkA"/>
-           <path class="link material-link" id="materialLinkB"/>
-           <path class="spring" id="springPath"/>
-         </svg>
-
-         <button
-           class="spring-handle"
-           id="springHandle"
-           type="button"
-           role="slider"
-           aria-label="Spacing between objects"
-           aria-valuemin="28"
-           aria-valuemax="150"
-           aria-valuenow="46"
-         ></button>
-       </section>
-     </div>
-
-     <section class="legend" aria-label="Interaction instructions">
-       <div>
-         <strong>Linked material</strong>
-         <span>Change the rust orb. Both card surfaces update through one connection.</span>
-       </div>
-       <div>
-         <strong>Spring layout</strong>
-         <span>Drag the gold handle between the cards, or focus it and use arrow keys.</span>
-       </div>
-       <div>
-         <strong>Style flow</strong>
-         <span>Change the green orb, then use the gate to block inheritance on object 02.</span>
-       </div>
-     </section>
-
-     <output class="state" aria-label="Current graph state" aria-live="polite">
-       <span id="materialState"></span>
-       <span id="flowState"></span>
-       <span id="gapState"></span>
-       <span id="gateState"></span>
-     </output>
-   </main>
-
-   <script>
-     const stage = document.querySelector("#stage");
-     const row = document.querySelector("#cardRow");
-     const cardA = document.querySelector("#cardA");
-     const cardB = document.querySelector("#cardB");
-     const materialOrb = document.querySelector("#materialOrb");
-     const flowOrb = document.querySelector("#flowOrb");
-     const flowGate = document.querySelector("#flowGate");
-     const springHandle = document.querySelector("#springHandle");
-     const overlay = document.querySelector("#overlay");
-
-     const links = {
-       flowA: document.querySelector("#flowLinkA"),
-       flowB: document.querySelector("#flowLinkB"),
-       materialA: document.querySelector("#materialLinkA"),
-       materialB: document.querySelector("#materialLinkB"),
-       spring: document.querySelector("#springPath")
-     };
-
-     const graph = {
-       material: materialOrb.value,
-       flow: flowOrb.value,
-       gap: 46,
-       blocked: false
-     };
-
-     const clampGap = value => Math.max(28, Math.min(150, Math.round(value)));
-     console.assert(clampGap(0) === 28 && clampGap(999) === 150, "gap clamp failed");
-
-     function localRect(element) {
-       const stageRect = stage.getBoundingClientRect();
-       const rect = element.getBoundingClientRect();
-       return {
-         left: rect.left - stageRect.left,
-         right: rect.right - stageRect.left,
-         top: rect.top - stageRect.top,
-         bottom: rect.bottom - stageRect.top,
-         width: rect.width,
-         height: rect.height
-       };
-     }
-
-     function curvedLink(source, target, targetRatio) {
-       const a = localRect(source);
-       const b = localRect(target);
-       const x1 = a.left + a.width / 2;
-       const y1 = a.bottom + 8;
-       const x2 = b.left + b.width * targetRatio;
-       const y2 = b.top - 8;
-       const bend = Math.max(35, (y2 - y1) * .45);
-       return `M ${x1} ${y1} C ${x1} ${y1 + bend}, ${x2} ${y2 - bend}, ${x2} ${y2}`;
-     }
-
-     function springLine(start, end, y) {
-       const points = [`${start},${y}`];
-       for (let index = 1; index < 12; index += 1) {
-         const x = start + (end - start) * index / 12;
-         points.push(`${x},${y + (index % 2 ? -8 : 8)}`);
-       }
-       points.push(`${end},${y}`);
-       return `M ${points.join(" L ")}`;
-     }
-
-     function drawConnections() {
-       overlay.setAttribute("viewBox", `0 0 ${stage.offsetWidth} ${stage.offsetHeight}`);
-       links.flowA.setAttribute("d", curvedLink(flowOrb, cardA, .25));
-       links.flowB.setAttribute("d", curvedLink(flowOrb, cardB, .25));
-       links.materialA.setAttribute("d", curvedLink(materialOrb, cardA, .75));
-       links.materialB.setAttribute("d", curvedLink(materialOrb, cardB, .75));
-
-       const first = localRect(cardA);
-       const second = localRect(cardB);
-       const start = first.right + 4;
-       const end = second.left - 4;
-       const y = first.top + first.height * .58;
-       links.spring.setAttribute("d", springLine(start, end, y));
-       springHandle.style.left = `${(start + end) / 2 - 15}px`;
-       springHandle.style.top = `${y - 15}px`;
-     }
-
-     let drawFrame;
-     function queueDraw() {
-       cancelAnimationFrame(drawFrame);
-       drawFrame = requestAnimationFrame(drawConnections);
-     }
-
-     function render() {
-       stage.style.setProperty("--shared-material", graph.material);
-       stage.style.setProperty("--flow-ink", graph.flow);
-       row.style.setProperty("--gap", `${graph.gap}px`);
-       cardB.classList.toggle("blocked", graph.blocked);
-       links.flowB.classList.toggle("blocked", graph.blocked);
-       flowGate.setAttribute("aria-pressed", String(graph.blocked));
-       springHandle.setAttribute("aria-valuenow", String(graph.gap));
-
-       document.querySelector("#materialState").textContent = `material ${graph.material}`;
-       document.querySelector("#flowState").textContent = `flow ${graph.flow}`;
-       document.querySelector("#gapState").textContent = `spring ${graph.gap}px`;
-       document.querySelector("#gateState").textContent = `gate ${graph.blocked ? "closed" : "open"}`;
-       queueDraw();
-     }
-
-     materialOrb.addEventListener("input", event => {
-       graph.material = event.target.value;
-       render();
-     });
-
-     flowOrb.addEventListener("input", event => {
-       graph.flow = event.target.value;
-       render();
-     });
-
-     flowGate.addEventListener("click", () => {
-       graph.blocked = !graph.blocked;
-       render();
-     });
-
-     let drag;
-     springHandle.addEventListener("pointerdown", event => {
-       drag = { pointerId: event.pointerId, x: event.clientX, gap: graph.gap };
-       springHandle.setPointerCapture(event.pointerId);
-       springHandle.classList.add("dragging");
-     });
-
-     springHandle.addEventListener("pointermove", event => {
-       if (!drag || event.pointerId !== drag.pointerId) return;
-       graph.gap = clampGap(drag.gap + event.clientX - drag.x);
-       render();
-     });
-
-     springHandle.addEventListener("lostpointercapture", () => {
-       drag = undefined;
-       springHandle.classList.remove("dragging");
-     });
-
-     springHandle.addEventListener("pointerup", event => {
-       if (springHandle.hasPointerCapture(event.pointerId)) {
-         springHandle.releasePointerCapture(event.pointerId);
-       }
-     });
-
-     springHandle.addEventListener("keydown", event => {
-       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-       event.preventDefault();
-       const direction = event.key === "ArrowRight" ? 1 : -1;
-       graph.gap = clampGap(graph.gap + direction * (event.shiftKey ? 12 : 4));
-       render();
-     });
-
-     new ResizeObserver(queueDraw).observe(stage);
-     new ResizeObserver(queueDraw).observe(row);
-     render();
-   </script>
- </body>
- </html>
-
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StyleMatter experiments</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      color: #292720;
+      background: #eee9de;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background:
+        linear-gradient(rgba(47, 44, 36, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47, 44, 36, .04) 1px, transparent 1px),
+        #eee9de;
+      background-size: 24px 24px;
+    }
+
+    main {
+      width: min(1050px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0 72px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      align-items: end;
+      gap: 42px;
+      margin-bottom: 42px;
+    }
+
+    h1 {
+      margin: 0;
+      font: 500 clamp(3.2rem, 9vw, 7rem)/.82 Georgia, serif;
+      letter-spacing: -.06em;
+    }
+
+    header p {
+      margin: 0;
+      color: #625d53;
+      line-height: 1.55;
+    }
+
+    .experiments {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    a {
+      position: relative;
+      min-height: 220px;
+      padding: 24px;
+      overflow: hidden;
+      border: 1px solid #c5bbac;
+      border-radius: 22px;
+      color: inherit;
+      background: rgba(255, 253, 247, .92);
+      box-shadow: 0 13px 28px rgba(54, 47, 36, .09);
+      text-decoration: none;
+      transition: transform 130ms ease, box-shadow 130ms ease;
+    }
+
+    a::before {
+      content: attr(data-number);
+      position: absolute;
+      right: 18px;
+      top: 7px;
+      color: rgba(23, 107, 99, .1);
+      font: 500 7rem/1 Georgia, serif;
+    }
+
+    a:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 17px 34px rgba(54, 47, 36, .14);
+    }
+
+    a:focus-visible {
+      outline: 4px solid #176b63;
+      outline-offset: 4px;
+    }
+
+    .label {
+      position: relative;
+      display: block;
+      margin-bottom: 36px;
+      color: #176b63;
+      font-size: .7rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      position: relative;
+      margin: 0 0 10px;
+      font: 500 1.7rem/1 Georgia, serif;
+    }
+
+    a p {
+      position: relative;
+      max-width: 30rem;
+      margin: 0;
+      color: #6b645a;
+      font-size: .85rem;
+      line-height: 1.5;
+    }
+
+    footer {
+      margin-top: 20px;
+      color: #746d62;
+      font: 700 .72rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    @media (max-width: 720px) {
+      main { padding-top: 32px; }
+      header, .experiments { grid-template-columns: 1fr; }
+      header { gap: 20px; }
+      a { min-height: 190px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      a { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>StyleMatter lab</h1>
+      <p>Four throwaway experiments testing whether presentation can be authored as objects, links, boundaries, and physical constraints instead of property text.</p>
+    </header>
+
+    <section class="experiments" aria-label="StyleMatter experiments">
+      <a href="docs/index2.html" data-number="01">
+        <span class="label">Experiment 01</span>
+        <h2>Properties as connections</h2>
+        <p>Linked material, spring spacing, and inherited style flow with a local gate.</p>
+      </a>
+
+      <a href="docs/direct-manipulation.html" data-number="02">
+        <span class="label">Experiment 02</span>
+        <h2>Touch the thing</h2>
+        <p>Surface, corner, inner-edge, and inter-object controls revealed where their effects happen.</p>
+      </a>
+
+      <a href="docs/selector-by-example.html" data-number="03">
+        <span class="label">Experiment 03</span>
+        <h2>Things like this</h2>
+        <p>Structural selection by pointing at an example and pulling its boundary through the hierarchy.</p>
+      </a>
+
+      <a href="docs/responsive-realities.html" data-number="04">
+        <span class="label">Experiment 04</span>
+        <h2>Squeeze the world</h2>
+        <p>Continuous responsive relationships and a movable stop for topology changes.</p>
+      </a>
+    </section>
+
+    <footer>Persistence intentionally deferred until the interaction model earns it.</footer>
+  </main>
+</body>
+</html>
